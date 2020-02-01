@@ -1,0 +1,102 @@
+#!/bin/bash
+#####################################################################
+#
+#AUTOR
+# Jefferson 'Slackjeff' Rocha <root@slackjeff.com.br>
+#
+#SBP - AUTOMATIC SLACKBUILDS
+#
+#------CHANGELOG
+# VERSION 0.1
+#  - sync, search, install
+#
+#####################################################################
+set -e
+
+############################## LOAD
+source sbp.conf
+
+############################## VARS
+recipeDirectory='/usr/slackbuilds-ports'
+
+############################## TEST
+[[ ! -d $recipeDirectory ]] && mkdir $recipeDirectory
+
+############################## FUNCTIONS
+
+# Usage
+USAGE()
+{
+   cat <<EOF
+sbp - Automatic slackbuilds.
+
+   -u, --update, update
+   Synchronize slackbuilds recipes on the local computer
+
+   -s, --search, search
+   Search recipes. Example: sbp --search python3
+EOF
+}
+
+# Sync ports on slackbuilds.org
+SYNC()
+{
+   # User select one repo?
+   if [[ -z "$REPOSITORY" ]]; then
+      echo "Edit the configuration file and select a version for the repository. /etc/sbp.conf"
+      return 1
+   fi
+
+   # Sync.
+   echo "Please, wait..."
+   cd $recipeDirectory
+   echo -e "SYNC VERSION: ${REPOSITORY[1]}\n"
+   sleep 1s
+   rsync -avzh $REPOSITORY . && return 0
+}
+
+SEARCH()
+{
+   local PKG="$1"
+
+   if [[ -z "$PKG" ]]; then
+      echo "Ooops... Name of software?"
+      exit 1
+   fi
+
+   cd $recipeDirectory
+   # Take directory of software, if exist.
+   FIND=$(find -type d -mindepth 2 -maxdepth 2 -name "$PKG" | sort | sed 's/\.\///')
+   if [[ -z "$FIND" ]]; then
+      echo "$PKG not found..."
+      return 1
+   fi
+
+   # If software exist.
+   cd $FIND
+   source ${PKG}.info # Load info of software.
+   echo "------------------------------------------"
+   echo "SOFTWARE  : $PRGNAM - $VERSION"
+   echo "MAINTAINER: $MAINTAINER"
+   echo "EMAIL     : $EMAIL"
+   echo -e "REQUIRES  : \e[34;1m$REQUIRES\e[m"
+   read -p $'\nFOR README ARCHIVE, [ENTER]' null
+   less README
+}
+
+
+case $1 in
+   -u|--update|update)
+      SYNC
+   ;;
+
+   -s|--search|search)
+      shift
+      SEARCH "$1"
+   ;;
+
+   *|-h|--help)
+      USAGE
+      exit 0
+   ;;
+esac
